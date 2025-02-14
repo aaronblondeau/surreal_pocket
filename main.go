@@ -84,16 +84,10 @@ func main() {
 		se.Router.GET("/search", func(e *core.RequestEvent) error {
 			// TODO - for this example we have no auth, but you would definitely want to check the user's token and permissions here!
 
-			// Get latitude and longitude from query
-			// latitude, _ := strconv.ParseFloat(e.Request.URL.Query().Get("latitude"), 64)
-			// longitude, _ := strconv.ParseFloat(e.Request.URL.Query().Get("longitude"), 64)
-
 			latitude := e.Request.URL.Query().Get("latitude")
 			longitude := e.Request.URL.Query().Get("longitude")
 
 			fmt.Println(latitude, longitude)
-
-			// latlng := []float64{latitude, longitude}
 
 			// Use a surreal spatial query to find nearby sightings
 			// Note, could not get var substitution to work for the geopoint
@@ -190,26 +184,12 @@ func main() {
 		latitude := 0.0
 		longitude := 0.0
 
-		// Get entry by Record ID - TODO switch to this when we can use pocketBaseId as record id
+		// Get matching record from SurrealDB
 		surrealRecord, err := surrealdb.Select[surrealSighting, models.RecordID](db, models.RecordID{Table: "sightings", ID: e.Record.Id})
 		if err == nil {
 			latitude = surrealRecord.Location.Latitude
 			longitude = surrealRecord.Location.Longitude
 		}
-
-		// // Find entry with matching pocketBaseId when pocketBaseId is not the primary key
-		// // This took FOREVER to write because SurrealDb's Go docs are out of date...
-		// // https://surrealdb.com/docs/sdk/golang/methods/query
-		// result, err := surrealdb.Query[[]surrealSighting](db, "SELECT * FROM type::table(sightings) WHERE pocketBaseId = $pbid", map[string]interface{}{"pbid": e.Record.Id})
-		// if err == nil {
-		// 	if len(*result) > 0 {
-		// 		found := (*result)[0]
-		// 		latitude = found.Result[0].Location.Latitude
-		// 		longitude = found.Result[0].Location.Longitude
-		// 	}
-		// } else {
-		// 	fmt.Println("~~ Error when querying for surreal record", err)
-		// }
 
 		// Inject latitude and longitude back into record before it goes out the door
 		e.Record.Set("latitude", latitude)
