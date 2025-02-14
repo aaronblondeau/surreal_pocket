@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surreal Pocket</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pocketbase/0.8.0-rc1/pocketbase.umd.js" integrity="sha512-rXvsONe8nnMbEMubzO3Oj1mXbromnFXo7jtDekeUJ4ZJ1UuJTc/HZ7qgTLw8oL6vdfxy3NL35slBflsaEwUhpw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="//unpkg.com/alpinejs" defer></script>
+</head>
+<body>
+    <h1>Sightings</h1>
+    <div>Submit your UFO sighting!</div>
+
+    <div x-data>
+        <div><textarea x-model="$store.sightings.newSightingDescription" placeholder="Description"></textarea></div>
+        <div><input type="number" x-model.number="$store.sightings.newSightingLatitude" placeholder="Latitude"></div>
+        <div><input type="number" x-model.number="$store.sightings.newSightingLongitude" placeholder="Longitude"></div>
+        <div><button @click="$store.sightings.create()">Create Sighting</button></div>
+
+        <div>
+            <h2>Recent:</h2>
+            <template x-for="sighting in $store.sightings.list">
+                <div>
+                    <span x-text="sighting.description"></span>
+                    <span x-text="sighting.latitude"></span>,<span x-text="sighting.longitude"></span>
+                    <button @click="$store.sightings.delete(sighting.id)">X</button>
+                </div>
+            </template>
+        </div>
+
+        <div>
+            <h2>Search</h2>
+            <div><input type="number" x-model.number="$store.sightings.searchLatitude" placeholder="Latitude"></div>
+            <div><input type="number" x-model.number="$store.sightings.searchLongitude" placeholder="Longitude"></div>
+            <div><button @click="$store.sightings.search()">Search</button></div>
+
+            <div x-show="$store.sightings.found.length > 0">
+                <h3>Found:</h3>
+                <template x-for="sighting in $store.sightings.found">
+                    <div>
+                        <span x-text="sighting.description"></span>
+                        <span x-text="sighting.latitude"></span>,<span x-text="sighting.longitude"></span>
+                        distance = <span x-text="sighting.distance"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const pb = new PocketBase('http://127.0.0.1:8090');
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('sightings', {
+                list: [],
+                found: [],
+                newSightingDescription: '',
+                newSightingLatitude: 38.51,
+                newSightingLongitude: -106.01,
+                searchLatitude: 38.51,
+                searchLongitude: -106.01,
+    
+                async fetch() {
+                    const results = await pb.collection('sightings').getList(1, 100)
+                    // TODO - handle pagination...
+                    this.list = results.items
+                },
+
+                async create() {
+                    console.log({
+                        latitude: this.newSightingLatitude,
+                        longitude: this.newSightingLongitude,
+                    })
+                    await pb.collection('sightings').create({
+                        description: this.newSightingDescription,
+                        latitude: this.newSightingLatitude,
+                        longitude: this.newSightingLongitude,
+                    })
+                    await this.fetch()
+                    this.newSightingDescription = ''
+                    this.newSightingLatitude = 38.51
+                    this.newSightingLongitude = -106.01
+                },
+
+                async delete(id) {
+                    await pb.collection('sightings').delete(id)
+                    await this.fetch()
+                },
+
+                async search(id) {
+                    const result = await fetch('/search?latitude=' + this.searchLatitude + '&longitude=' + this.searchLongitude)
+                    this.found = await result.json()
+                },
+
+                init() {
+                    this.fetch()
+                },
+            })
+        })
+    </script>
+</body>
+</html>
